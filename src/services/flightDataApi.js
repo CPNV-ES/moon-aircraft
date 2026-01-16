@@ -3,9 +3,9 @@
  * Fetches real-time aircraft state vectors from OpenSky Network API
  */
 
-const OPENSKY_API_BASE_URL = 'https://opensky-network.org/api'
-const EARTH_RADIUS_KM = 6371
-const RADIUS_KM = 100
+import { OPENSKY_API } from '../config/constants'
+
+const { BASE_URL: OPENSKY_API_BASE_URL, EARTH_RADIUS_KM, DEFAULT_RADIUS_KM } = OPENSKY_API
 
 /**
  * Calculate bounding box coordinates from observer location and radius
@@ -14,7 +14,7 @@ const RADIUS_KM = 100
  * @param {number} radiusKm - Radius in kilometers (default: 100km)
  * @returns {Object} Bounding box with lamin, lomin, lamax, lomax
  */
-function calculateBoundingBox(latitude, longitude, radiusKm = RADIUS_KM) {
+function calculateBoundingBox(latitude, longitude, radiusKm = DEFAULT_RADIUS_KM) {
   // Convert radius from km to degrees (approximate)
   const latOffset = radiusKm / EARTH_RADIUS_KM * (180 / Math.PI)
   const lonOffset = radiusKm / (EARTH_RADIUS_KM * Math.cos(latitude * Math.PI / 180)) * (180 / Math.PI)
@@ -35,7 +35,7 @@ function calculateBoundingBox(latitude, longitude, radiusKm = RADIUS_KM) {
  * @returns {Promise<Array>} Array of aircraft state vectors
  * @throws {Error} If API call fails
  */
-export async function fetchAircraftWithinRadius(latitude, longitude, radiusKm = RADIUS_KM) {
+export async function fetchAircraftWithinRadius(latitude, longitude, radiusKm = DEFAULT_RADIUS_KM) {
   try {
     // Validate coordinates
     if (latitude < -90 || latitude > 90) {
@@ -96,53 +96,6 @@ export async function fetchAircraftWithinRadius(latitude, longitude, radiusKm = 
     return aircraft
   } catch (error) {
     console.error('Failed to fetch aircraft data:', error)
-    throw error
-  }
-}
-
-/**
- * Fetch all aircraft state vectors globally
- * @returns {Promise<Array>} Array of all aircraft state vectors
- * @throws {Error} If API call fails
- */
-export async function fetchAllAircraft() {
-  try {
-    const response = await fetch(`${OPENSKY_API_BASE_URL}/states/all`)
-    
-    if (!response.ok) {
-      throw new Error(`OpenSky API Error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    
-    if (!data.states) {
-      return []
-    }
-
-    const aircraft = data.states.map(state => ({
-      icao24: state[0],
-      callsign: state[1]?.trim() || '',
-      origin_country: state[2],
-      time_position: state[3],
-      last_contact: state[4],
-      longitude: state[5],
-      latitude: state[6],
-      baro_altitude: state[7],
-      on_ground: state[8],
-      velocity: state[9],
-      true_track: state[10],
-      vertical_rate: state[11],
-      sensors: state[12],
-      geo_altitude: state[13],
-      squawk: state[14],
-      spi: state[15],
-      position_source: state[16],
-      category: state[17]
-    }))
-
-    return aircraft
-  } catch (error) {
-    console.error('Failed to fetch all aircraft:', error)
     throw error
   }
 }
