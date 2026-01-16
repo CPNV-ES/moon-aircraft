@@ -99,3 +99,83 @@ export async function fetchAircraftWithinRadius(latitude, longitude, radiusKm = 
     throw error
   }
 }
+
+/**
+ * Fetch all aircraft state vectors globally
+ * @returns {Promise<Array>} Array of all aircraft state vectors
+ * @throws {Error} If API call fails
+ */
+export async function fetchAllAircraft() {
+  try {
+    const response = await fetch(`${OPENSKY_API_BASE_URL}/states/all`)
+    
+    if (!response.ok) {
+      throw new Error(`OpenSky API Error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    
+    if (!data.states) {
+      return []
+    }
+
+    const aircraft = data.states.map(state => ({
+      icao24: state[0],
+      callsign: state[1]?.trim() || '',
+      origin_country: state[2],
+      time_position: state[3],
+      last_contact: state[4],
+      longitude: state[5],
+      latitude: state[6],
+      baro_altitude: state[7],
+      on_ground: state[8],
+      velocity: state[9],
+      true_track: state[10],
+      vertical_rate: state[11],
+      sensors: state[12],
+      geo_altitude: state[13],
+      squawk: state[14],
+      spi: state[15],
+      position_source: state[16],
+      category: state[17]
+    }))
+
+    return aircraft
+  } catch (error) {
+    console.error('Failed to fetch all aircraft:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch specific aircraft track by ICAO24 address
+ * @param {string} icao24 - ICAO24 address of the aircraft
+ * @param {number} time - Time in seconds since epoch (optional)
+ * @returns {Promise<Object>} Aircraft track data
+ * @throws {Error} If API call fails
+ */
+export async function fetchAircraftTrack(icao24, time = 0) {
+  try {
+    if (!icao24) {
+      throw new Error('ICAO24 address is required')
+    }
+
+    const params = new URLSearchParams({ icao24 })
+    if (time > 0) {
+      params.append('time', time)
+    }
+
+    const url = `${OPENSKY_API_BASE_URL}/tracks/all?${params}`
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      throw new Error(`OpenSky API Error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to fetch aircraft track:', error)
+    throw error
+  }
+}
