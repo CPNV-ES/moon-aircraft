@@ -9,3 +9,10 @@ export const config = {
         pitch: 10
     }
 }
+
+// OpenSky Network API Configuration
+export const OPENSKY_API = {
+    BASE_URL: 'https://opensky-network.org/api',
+    EARTH_RADIUS_KM: 6371,
+    DEFAULT_RADIUS_KM: 100
+}
