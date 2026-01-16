@@ -26,3 +26,76 @@ function calculateBoundingBox(latitude, longitude, radiusKm = RADIUS_KM) {
     lomax: Math.min(180, longitude + lonOffset)
   }
 }
+
+/**
+ * Fetch aircraft state vectors within a 100km radius of observer location
+ * @param {number} latitude - Observer latitude
+ * @param {number} longitude - Observer longitude
+ * @param {number} radiusKm - Search radius in kilometers (default: 100km)
+ * @returns {Promise<Array>} Array of aircraft state vectors
+ * @throws {Error} If API call fails
+ */
+export async function fetchAircraftWithinRadius(latitude, longitude, radiusKm = RADIUS_KM) {
+  try {
+    // Validate coordinates
+    if (latitude < -90 || latitude > 90) {
+      throw new Error('Invalid latitude: must be between -90 and 90')
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw new Error('Invalid longitude: must be between -180 and 180')
+    }
+
+    // Calculate bounding box
+    const bbox = calculateBoundingBox(latitude, longitude, radiusKm)
+
+    // Build API URL with parameters
+    const params = new URLSearchParams({
+      lamin: bbox.lamin.toFixed(4),
+      lomin: bbox.lomin.toFixed(4),
+      lamax: bbox.lamax.toFixed(4),
+      lomax: bbox.lomax.toFixed(4)
+    })
+
+    const url = `${OPENSKY_API_BASE_URL}/states/all?${params}`
+    
+    // Fetch from OpenSky API
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      throw new Error(`OpenSky API Error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    
+    if (!data.states) {
+      return []
+    }
+
+    // Filter and transform aircraft data
+    const aircraft = data.states.map(state => ({
+      icao24: state[0],
+      callsign: state[1]?.trim() || '',
+      origin_country: state[2],
+      time_position: state[3],
+      last_contact: state[4],
+      longitude: state[5],
+      latitude: state[6],
+      baro_altitude: state[7],
+      on_ground: state[8],
+      velocity: state[9],
+      true_track: state[10],
+      vertical_rate: state[11],
+      sensors: state[12],
+      geo_altitude: state[13],
+      squawk: state[14],
+      spi: state[15],
+      position_source: state[16],
+      category: state[17]
+    }))
+
+    return aircraft
+  } catch (error) {
+    console.error('Failed to fetch aircraft data:', error)
+    throw error
+  }
+}
