@@ -42,6 +42,33 @@ export function useCesiumCam() {
             console.error(e);
         }
 
+        viewer.scene.cullRequestsWhileMoving = true;
+        viewer.scene.cullRequestsWhileMovingMultiplier = 60.0;
+
+        viewer.entities.add({
+            position: new Cesium.CallbackProperty((time) => {
+                const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+                if (Cesium.defined(icrfToFixed)) {
+                    const moonPosition = Cesium.Simon1994PlanetaryPositions.computeMoonPositionInEarthInertialFrame(time);
+                    return Cesium.Matrix3.multiplyByVector(icrfToFixed, moonPosition, new Cesium.Cartesian3());
+                }
+                return undefined;
+            }, false),
+            label: {
+                text: "Lune",
+                font: "14pt monospace",
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                fillColor: Cesium.Color.YELLOW,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                pixelOffset: new Cesium.Cartesian2(0, -20),
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+            }
+        });
+
+        const defaultLoc = config.location;
+
         viewer.camera.setView({
             destination: Cesium.Cartesian3.fromDegrees(location.lng, location.lat, location.height),
             orientation: {
