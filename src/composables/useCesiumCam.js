@@ -80,6 +80,53 @@ export function useCesiumCam() {
 
         viewer.camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
 
+        const canvas = viewer.scene.canvas;
+        canvas.addEventListener("wheel", (e) => {
+            e.preventDefault();
+
+            const camera = viewer.camera;
+            const frustum = camera.frustum;
+
+            const zoomAmount = 0.05;
+
+            let currentFov = frustum.fov;
+
+            if (e.deltaY > 0) {
+                currentFov += zoomAmount;
+            } else {
+                currentFov -= zoomAmount;
+            }
+
+            const minFov = Cesium.Math.toRadians(5);
+            const maxFov = Cesium.Math.toRadians(120);
+
+            currentFov = Cesium.Math.clamp(currentFov, minFov, maxFov);
+
+            frustum.fov = currentFov;
+
+            fov.value = Math.round(Cesium.Math.toDegrees(currentFov));
+
+        }, { passive: false });
+
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition((pos) => {
+                const { latitude, longitude } = pos.coords;
+
+                const camera = viewer.camera;
+                const carto = Cesium.Cartographic.fromDegrees(longitude, latitude);
+
+                let terrainHeight = viewer.scene.globe.getHeight(carto);
+                if (terrainHeight === undefined) terrainHeight = camera.positionCartographic.height;
+
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, terrainHeight + 2.0),
+                    orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 }
+                });
+
+            }, (err) => console.warn(err), { enableHighAccuracy: true });
+        }
+
         const controller = viewer.scene.screenSpaceCameraController;
         controller.enableZoom = false;
         controller.enableTranslate = false;
