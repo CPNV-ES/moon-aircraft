@@ -56,33 +56,19 @@ export function useCesiumCam() {
         viewer.scene.postRender.addEventListener(() => {
             const camera = viewer.camera;
             if (Math.abs(camera.roll) > 0.0) {
-                camera.setView({orientation: {heading: camera.heading, pitch: camera.pitch, roll: 0.0}});
+                camera.setView({ orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 } });
             }
             const pitchDeg = Cesium.Math.toDegrees(camera.pitch);
-            if (pitchDeg < -30) camera.setView({
-                orientation: {
-                    heading: camera.heading,
-                    pitch: Cesium.Math.toRadians(-30),
-                    roll: 0.0
-                }
-            });
-            if (pitchDeg > 85) camera.setView({
-                orientation: {
-                    heading: camera.heading,
-                    pitch: Cesium.Math.toRadians(85),
-                    roll: 0.0
-                }
-            });
+            if (pitchDeg < -30) camera.setView({ orientation: { heading: camera.heading, pitch: Cesium.Math.toRadians(-30), roll: 0.0 } });
+            if (pitchDeg > 85) camera.setView({ orientation: { heading: camera.heading, pitch: Cesium.Math.toRadians(85), roll: 0.0 } });
 
             const position = camera.positionCartographic;
-            const terrainHeight = viewer.scene.globe.getHeight(position);
-            const targetHeight = 2.0;
-
-            if (terrainHeight !== undefined && Math.abs(position.height - (terrainHeight + targetHeight)) > 0.5) {
-                const newPos = Cesium.Cartesian3.fromRadians(position.longitude, position.latitude, terrainHeight + targetHeight);
+            const tHeight = viewer.scene.globe.getHeight(position);
+            if (tHeight !== undefined && Math.abs(position.height - (tHeight + 2.0)) > 0.5) {
+                const newPos = Cesium.Cartesian3.fromRadians(position.longitude, position.latitude, tHeight + 2.0);
                 camera.setView({
                     destination: newPos,
-                    orientation: {heading: camera.heading, pitch: camera.pitch, roll: 0.0}
+                    orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 }
                 });
             }
         });
