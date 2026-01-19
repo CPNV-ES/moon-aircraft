@@ -1,28 +1,44 @@
-import {config} from "@/config/constants.js";
+import { ref, watch } from "vue";
+import { config } from "@/config/constants.js";
 
 export function useCesiumCam() {
 
-    const setupScene = async ({viewer, Cesium}) => {
+    const direction = ref("---");
+    const angle = ref(0);
+    const showBuildings = ref(true);
+
+    const fov = ref(60);
+
+    const setupScene = async ({ viewer, Cesium }) => {
 
         Cesium.Ion.defaultAccessToken = config.cesiumToken;
         let location = config.location;
 
-        if (navigator.geolocation) {
-            try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
-                location = {...location, lat: position.coords.latitude, lng: position.coords.longitude};
-            } catch (e) {
-                console.warn("Géolocalisation échouée, utilisation de la position par défaut.");
-            }
-        }
-
+        viewer.resolutionScale = 0.9;
         viewer.scene.globe.enableLighting = true;
+        viewer.scene.fog.enabled = true;
+        viewer.scene.fog.density = 0.0003;
+        viewer.scene.fog.screenSpaceErrorFactor = 2.0;
+        viewer.scene.globe.maximumScreenSpaceError = 2;
 
         try {
             viewer.scene.terrainProvider = await Cesium.createWorldTerrainAsync();
-            viewer.scene.primitives.add(await Cesium.createOsmBuildingsAsync());
+
+            const buildings = await Cesium.createOsmBuildingsAsync();
+            buildings.style = new Cesium.Cesium3DTileStyle({ color: "color('white', 0.3)" });
+
+            buildings.maximumScreenSpaceError = 32;
+            buildings.dynamicScreenSpaceError = true;
+            buildings.dynamicScreenSpaceErrorDensity = 0.00278;
+            buildings.dynamicScreenSpaceErrorFactor = 4.0;
+            buildings.dynamicScreenSpaceErrorHeightFalloff = 0.25;
+
+            viewer.scene.primitives.add(buildings);
+
+            watch(showBuildings, (isVisible) => {
+                buildings.show = isVisible;
+            });
+
         } catch (e) {
             console.error(e);
         }
