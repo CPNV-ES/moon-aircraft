@@ -12,7 +12,6 @@ export function useCesiumCam() {
     const setupScene = async ({ viewer, Cesium }) => {
 
         Cesium.Ion.defaultAccessToken = config.cesiumToken;
-        let location = config.location;
 
         viewer.resolutionScale = 0.9;
         viewer.scene.globe.enableLighting = true;
@@ -88,7 +87,6 @@ export function useCesiumCam() {
                 });
             }
         });
-
     };
 
     return {
