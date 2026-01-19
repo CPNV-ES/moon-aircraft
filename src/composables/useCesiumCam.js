@@ -135,12 +135,6 @@ export function useCesiumCam() {
         controller.lookEventTypes = [Cesium.CameraEventType.LEFT_DRAG, Cesium.CameraEventType.PINCH];
         controller.rotateEventTypes = undefined;
         controller.zoomEventTypes = undefined;
-        controller.tiltEventTypes = undefined;
-        controller.lookEventTypes = [
-            Cesium.CameraEventType.LEFT_DRAG,
-            Cesium.CameraEventType.PINCH
-        ];
-
 
         viewer.scene.postRender.addEventListener(() => {
             const camera = viewer.camera;
@@ -173,6 +167,10 @@ export function useCesiumCam() {
     };
 
     return {
-        setupScene
+        setupScene,
+        direction,
+        angle,
+        showBuildings,
+        fov
     };
 }
