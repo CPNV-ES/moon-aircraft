@@ -70,10 +70,10 @@ export function useCesiumCam() {
         const defaultLoc = config.location;
 
         viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(location.lng, location.lat, location.height),
+            destination: Cesium.Cartesian3.fromDegrees(defaultLoc.lng, defaultLoc.lat, defaultLoc.height),
             orientation: {
-                heading: Cesium.Math.toRadians(location.heading),
-                pitch: Cesium.Math.toRadians(location.pitch),
+                heading: Cesium.Math.toRadians(defaultLoc.heading),
+                pitch: Cesium.Math.toRadians(defaultLoc.pitch),
                 roll: 0.0
             }
         });
