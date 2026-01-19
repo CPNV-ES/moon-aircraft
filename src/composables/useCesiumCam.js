@@ -132,7 +132,7 @@ export function useCesiumCam() {
         controller.enableTranslate = false;
         controller.enableTilt = false;
         controller.enableLook = true;
-
+        controller.lookEventTypes = [Cesium.CameraEventType.LEFT_DRAG, Cesium.CameraEventType.PINCH];
         controller.rotateEventTypes = undefined;
         controller.zoomEventTypes = undefined;
         controller.tiltEventTypes = undefined;
@@ -144,9 +144,18 @@ export function useCesiumCam() {
 
         viewer.scene.postRender.addEventListener(() => {
             const camera = viewer.camera;
+
+            let headingDeg = Cesium.Math.toDegrees(camera.heading);
+            headingDeg = (headingDeg + 360) % 360;
+            angle.value = Math.round(headingDeg);
+            const directions = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+            const index = Math.round(headingDeg / 45) % 8;
+            direction.value = directions[index];
+
             if (Math.abs(camera.roll) > 0.0) {
                 camera.setView({ orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 } });
             }
+
             const pitchDeg = Cesium.Math.toDegrees(camera.pitch);
             if (pitchDeg < -30) camera.setView({ orientation: { heading: camera.heading, pitch: Cesium.Math.toRadians(-30), roll: 0.0 } });
             if (pitchDeg > 85) camera.setView({ orientation: { heading: camera.heading, pitch: Cesium.Math.toRadians(85), roll: 0.0 } });
