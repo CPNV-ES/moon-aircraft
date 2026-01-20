@@ -15,6 +15,8 @@ const onViewerReady = (cesiumInstance) => {
         :animation="false"
         :base-layer-picker="false"
         :timeline="false"
+        :selection-indicator="false"
+        :info-box="false"
         @ready="onViewerReady"
     >
       <vc-layer-imagery>
