@@ -136,6 +136,9 @@ export function useCesiumCam() {
         controller.rotateEventTypes = undefined;
         controller.zoomEventTypes = undefined;
 
+        viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+        viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
         viewer.scene.postRender.addEventListener(() => {
             const camera = viewer.camera;
 
