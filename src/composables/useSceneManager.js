@@ -16,11 +16,18 @@ export function useSceneManager() {
         viewer.scene.fog.screenSpaceErrorFactor = 2.0;
         viewer.scene.globe.maximumScreenSpaceError = 2;
 
+        viewer.scene.moon = new Cesium.Moon({
+            show: true,
+            textureUrl: Cesium.buildModuleUrl("Assets/Textures/moonSmall.jpg"),
+            onlySunLighting: false
+        });
+
         try {
             viewer.scene.terrainProvider = await Cesium.createWorldTerrainAsync();
 
             const buildings = await Cesium.createOsmBuildingsAsync();
             buildings.style = new Cesium.Cesium3DTileStyle({ color: "color('white', 0.3)" });
+
             buildings.maximumScreenSpaceError = 32;
             buildings.dynamicScreenSpaceError = true;
             buildings.dynamicScreenSpaceErrorDensity = 0.00278;
