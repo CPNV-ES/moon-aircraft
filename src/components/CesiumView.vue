@@ -21,12 +21,20 @@ const direction = ref("---");
 const angle = ref(0);
 const fov = ref(60);
 
-const onViewerReady = (cesiumInstance) => {
+const onViewerReady = async (cesiumInstance) => {
   const { viewer, Cesium } = cesiumInstance;
   Cesium.Ion.defaultAccessToken = config.cesiumToken;
 
-  setupScene(viewer, Cesium);
-
+  try {
+    const imageryProvider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+    );
+    viewer.imageryLayers.addImageryProvider(imageryProvider);
+  } catch (e) {
+    console.error("Failed to load base imagery layer:", e);
+  }
+  
+  setupScene(viewer, Cesium, config);
   const playerState = initPlayer(viewer, Cesium, config.location);
 
   direction.value = playerState.direction;
