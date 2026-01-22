@@ -16,12 +16,14 @@ export function useAutoRefresh(callback, initialInterval = DEFAULT_INTERVAL) {
 
     isRunning.value = true
 
-    // Call immediately
     if (callback && typeof callback === 'function') {
-      callback()
+      try {
+        callback()
+      } catch (error) {
+        console.error('Initial auto-refresh call failed:', error)
+      }
     }
 
-    // Set up timer
     intervalId = setInterval(() => {
       if (isRunning.value && callback && typeof callback === 'function') {
         try {
