@@ -3,10 +3,12 @@ defineProps({
   direction: String,
   angle: Number,
   fov: Number,
-  showBuildings: Boolean
+  showBuildings: Boolean,
+  aircraftCount: Number,
+  loading: Boolean
 });
 
-defineEmits(['toggleBuildings']);
+defineEmits(['toggleBuildings', 'fetch-flights']);
 </script>
 
 <template>
@@ -15,10 +17,17 @@ defineEmits(['toggleBuildings']);
       <div class="direction-letter">{{ direction }}</div>
       <div class="direction-angle">{{ angle }}°</div>
       <div class="fov-info">FOV: {{ fov }}°</div>
+      <div v-if="aircraftCount > 0" class="aircraft-count">
+        Aircraft: {{ aircraftCount }}
+      </div>
     </div>
 
+    <button class="hud-btn fetch-btn" @click="$emit('fetch-flights')" :disabled="loading">
+      {{ loading ? 'Loading...' : 'Fetch Flights' }}
+    </button>
+
     <button class="hud-btn" @click="$emit('toggleBuildings')">
-      {{ showBuildings ? 'Cacher Bâtiments' : 'Afficher Bâtiments' }}
+      {{ showBuildings ? 'Hide Buildings' : 'Show Buildings' }}
     </button>
   </div>
 </template>
@@ -48,6 +57,8 @@ defineEmits(['toggleBuildings']);
   border-radius: 15px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
+  min-width: 120px;
+  text-align: center;
 }
 
 .direction-letter {
@@ -57,18 +68,9 @@ defineEmits(['toggleBuildings']);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.direction-angle {
-  font-family: monospace;
-  font-size: 1rem;
-  opacity: 0.8;
-}
-
-.fov-info {
-  margin-top: 5px;
-  font-size: 0.8rem;
-  color: #aaa;
-  font-family: monospace;
-}
+.direction-angle { font-family: monospace; font-size: 1rem; opacity: 0.8; }
+.fov-info { margin-top: 5px; font-size: 0.8rem; color: #aaa; font-family: monospace; }
+.aircraft-count { margin-top: 8px; font-size: 0.9rem; color: #00ddff; font-family: monospace; font-weight: bold; }
 
 .hud-btn {
   position: absolute;
@@ -93,8 +95,10 @@ defineEmits(['toggleBuildings']);
   background: rgba(255, 255, 255, 0.2);
   transform: translateX(-50%) scale(1.05);
 }
+.hud-btn:active { transform: translateX(-50%) scale(0.95); }
+.hud-btn:disabled { background: #333; color: #888; cursor: not-allowed; }
 
-.hud-btn:active {
-  transform: translateX(-50%) scale(0.95);
+.fetch-btn {
+  bottom: 100px;
 }
 </style>
