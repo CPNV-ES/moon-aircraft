@@ -10,22 +10,15 @@ jobs:
   sync-branches:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.BOT_ADMIN_TOKEN}}
 
-      - name: Configure Git
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_ADMIN_TOKEN }}
         run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-
-      - name: Merge changes from develop
-        run: |
-          git merge origin/develop -m "chore: merge develop into main"
-          git push origin main
+          gh pr create --base main --head develop --title "Sync Develop to Main" --body "Automated PR to sync changes from develop to main." || echo "PR already exists"
