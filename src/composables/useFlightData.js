@@ -1,59 +1,60 @@
+// src/composables/useFlightData.js
+
 import { ref, computed } from 'vue'
-import { fetchAircraftWithinRadius } from '../services/flightDataApi'
+import { fetchAndStoreAircraft } from '../services/flightDataService'
+import { useAircraftStore } from './useAircraftStore'
 import { config } from '../config/constants'
 
 /**
- * useFlightData - Flight data state management (Issue #11)
+ * useFlightData - Composable for managing flight data state and fetching.
  */
 export function useFlightData() {
-  const flights = ref([])
-  const loading = ref(false)
-  const error = ref(null)
-  const lastUpdated = ref(null)
+  const { getAllAircraft, clearAircraft, aircraftCount } = useAircraftStore();
 
-  const flightCount = computed(() => flights.value.length)
-  const hasError = computed(() => error.value !== null)
+  const loading = ref(false);
+  const error = ref(null);
+  const lastUpdated = ref(null);
+
+  const flights = computed(() => getAllAircraft());
+  const hasError = computed(() => error.value !== null);
 
   /**
-   * Fetch aircraft from default location
+   * Fetch aircraft from the default location using the flight data service.
    */
   async function fetchFlights() {
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
 
     try {
-      const { lat, lng } = config.location
-      const aircraft = await fetchAircraftWithinRadius(lat, lng)
-      flights.value = aircraft
-      lastUpdated.value = new Date()
-      return flights.value
+      const { lat, lng } = config.location;
+      await fetchAndStoreAircraft({ lat, lng });
+      lastUpdated.value = new Date();
     } catch (err) {
-      error.value = err.message || 'Failed to fetch flight data'
-      console.error('Fetch error:', err)
-      return []
+      error.value = err.message || 'Failed to fetch flight data';
+      console.error('Fetch error:', err);
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
-
-  function clearFlights() {
-    flights.value = []
-    lastUpdated.value = null
-  }
-
+  
   function clearError() {
-    error.value = null
+    error.value = null;
   }
 
   return {
+    // Reactive data from the store
     flights,
+    aircraftCount,
+    
+    // State properties
     loading,
     error,
     lastUpdated,
-    flightCount,
     hasError,
+
+    // Functions
     fetchFlights,
-    clearFlights,
+    clearAircraft,
     clearError
-  }
+  };
 }
