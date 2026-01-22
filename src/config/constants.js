@@ -12,7 +12,10 @@ export const config = {
 
 // OpenSky Network API Configuration
 export const OPENSKY_API = {
-    BASE_URL: 'https://opensky-network.org/api',
+    BASE_URL: '/opensky-api',
+    TOKEN_URL: '/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token',
+    CLIENT_ID: import.meta.env['VITE_OPENSKY_CLIENT_ID'],
+    CLIENT_SECRET: import.meta.env['VITE_OPENSKY_CLIENT_SECRET'],
     EARTH_RADIUS_KM: 6371,
     DEFAULT_RADIUS_KM: 100
 }
