@@ -6,10 +6,13 @@ import { useSceneManager } from "@/composables/useSceneManager.js";
 import { usePlayerSystem } from "@/composables/usePlayerSystem.js";
 import AppHud from "@/components/AppHud.vue";
 import { useFlightData } from "@/composables/useFlightData.js";
+import { useAutoRefresh } from "@/composables/useAutoRefresh.js";
 
 const { setupScene, showBuildings } = useSceneManager();
 const { initPlayer } = usePlayerSystem();
-const { aircraftCount, fetchFlights, error, loading } = useFlightData();
+
+const { aircraftCount, fetchFlights, error } = useFlightData();
+const { start: startAutoRefresh } = useAutoRefresh(fetchFlights, 30000);
 
 watch(error, (newError) => {
     if(newError) {
@@ -60,10 +63,7 @@ const onViewerReady = async (cesiumInstance) => {
       :angle="angle.value"
       :fov="fov.value"
       :show-buildings="showBuildings"
-      :aircraft-count="aircraftCount"
-      :loading="loading"
       @toggle-buildings="showBuildings = !showBuildings"
-      @fetch-flights="fetchFlights"
     />
   </div>
 </template>
