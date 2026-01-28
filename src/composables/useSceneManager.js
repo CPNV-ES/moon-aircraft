@@ -1,4 +1,5 @@
 import { ref, watch } from "vue";
+import {fetchMoonTextureUrl} from "@/services/AstronomyService.js";
 
 export function useSceneManager() {
     const showBuildings = ref(true);
@@ -17,11 +18,20 @@ export function useSceneManager() {
         viewer.scene.fog.screenSpaceErrorFactor = 2.0;
         viewer.scene.globe.maximumScreenSpaceError = 2;
 
-        viewer.scene.moon = new Cesium.Moon({
-            show: true,
-            textureUrl: Cesium.buildModuleUrl("Assets/Textures/moonSmall.jpg"),
-            onlySunLighting: false
-        });
+        try {
+            console.log("Fetching custom moon texture from Astronomy API...");
+            const customMoonUrl = await fetchMoonTextureUrl();
+            viewer.scene.moon = new Cesium.Moon({
+                textureUrl: customMoonUrl || Cesium.buildModuleUrl("Assets/Textures/moonSmall.jpg"),
+                onlySunLighting: false
+            });
+        } catch (e) {
+            console.error("Could not set up custom moon, using default.", e);
+            viewer.scene.moon = new Cesium.Moon({
+                show: true,
+                onlySunLighting: true
+            });
+        }
 
         try {
             viewer.scene.terrainProvider = await Cesium.createWorldTerrainAsync();
