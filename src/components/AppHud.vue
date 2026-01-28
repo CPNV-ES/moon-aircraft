@@ -3,10 +3,11 @@ defineProps({
   direction: String,
   angle: Number,
   fov: Number,
-  showBuildings: Boolean
+  showBuildings: Boolean,
+  showLandscape: Boolean
 });
 
-defineEmits(['toggleBuildings']);
+defineEmits(['toggleBuildings', 'toggleLandscape']);
 </script>
 
 <template>
@@ -22,6 +23,9 @@ defineEmits(['toggleBuildings']);
     <div class="hud-panel controls-panel">
       <button class="hud-btn" @click="$emit('toggleBuildings')">
         {{ showBuildings ? 'Hide Buildings' : 'Show Buildings' }}
+      </button>
+      <button class="hud-btn" @click="$emit('toggleLandscape')">
+        {{ showLandscape ? 'Hide Landscape' : 'Show Landscape' }}
       </button>
     </div>
   </div>
