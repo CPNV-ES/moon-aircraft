@@ -26,6 +26,7 @@ export function usePlayerSystem() {
     };
 
     return {
-        initPlayer
+        initPlayer,
+        coords
     };
 }
