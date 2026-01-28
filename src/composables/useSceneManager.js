@@ -5,7 +5,7 @@ export function useSceneManager() {
     const showBuildings = ref(true);
     const showLandscape = ref(true);
 
-    const setupScene = async (viewer, Cesium, config) => {
+    const setupScene = async (viewer, Cesium, config, coords) => {
         viewer.resolutionScale = 0.9;
         viewer.shadows = true;
         viewer.terrainShadows = Cesium.ShadowMode.RECEIVE_ONLY;
@@ -18,19 +18,33 @@ export function useSceneManager() {
         viewer.scene.fog.screenSpaceErrorFactor = 2.0;
         viewer.scene.globe.maximumScreenSpaceError = 2;
 
-        try {
-            console.log("Fetching custom moon texture from Astronomy API...");
-            const customMoonUrl = await fetchMoonTextureUrl();
-            viewer.scene.moon = new Cesium.Moon({
-                textureUrl: customMoonUrl || Cesium.buildModuleUrl("Assets/Textures/moonSmall.jpg"),
-                onlySunLighting: false
-            });
-        } catch (e) {
-            console.error("Could not set up custom moon, using default.", e);
-            viewer.scene.moon = new Cesium.Moon({
-                show: true,
-                onlySunLighting: true
-            });
+        viewer.scene.moon = new Cesium.Moon({
+            show: true,
+            onlySunLighting: true
+        });
+
+        const updateMoon = async (lat, lng) => {
+            try {
+                console.log("Fetching custom moon texture from Astronomy API...");
+                const customMoonUrl = await fetchMoonTextureUrl(lat, lng);
+                viewer.scene.moon = new Cesium.Moon({
+                    textureUrl: customMoonUrl || Cesium.buildModuleUrl("Assets/Textures/moonSmall.jpg"),
+                    onlySunLighting: false
+                });
+            } catch (e) {
+                console.error("Could not set up custom moon, using default.", e);
+            }
+        };
+
+        if (coords) {
+            const unwatch = watch(coords, (val) => {
+                if (val) {
+                    updateMoon(val.lat, val.lng);
+                    unwatch();
+                }
+            }, { immediate: true });
+        } else {
+            await updateMoon(config.location.lat, config.location.lng);
         }
 
         try {

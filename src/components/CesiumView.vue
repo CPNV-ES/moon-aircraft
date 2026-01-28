@@ -9,7 +9,7 @@ import { useFlightData } from "@/composables/useFlightData.js";
 import { useAutoRefresh } from "@/composables/useAutoRefresh.js";
 
 const { setupScene, showBuildings, showLandscape } = useSceneManager();
-const { initPlayer } = usePlayerSystem();
+const { initPlayer, coords } = usePlayerSystem();
 
 const { aircraftCount, fetchFlights, error } = useFlightData();
 const { start: startAutoRefresh } = useAutoRefresh(fetchFlights, 30000);
@@ -37,7 +37,7 @@ const onViewerReady = async (cesiumInstance) => {
     console.error("Failed to load base imagery layer:", e);
   }
 
-  setupScene(viewer, Cesium, config);
+  setupScene(viewer, Cesium, config, coords);
   const playerState = initPlayer(viewer, Cesium, config.location);
 
   direction.value = playerState.direction;
