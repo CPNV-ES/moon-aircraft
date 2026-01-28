@@ -2,6 +2,7 @@ import { ref, watch } from "vue";
 
 export function useSceneManager() {
     const showBuildings = ref(true);
+    const showLandscape = ref(true);
 
     const setupScene = async (viewer, Cesium, config) => {
         viewer.resolutionScale = 0.9;
@@ -67,10 +68,16 @@ export function useSceneManager() {
                 disableDepthTestDistance: Number.POSITIVE_INFINITY
             }
         });
+
+        watch(showLandscape, (val) => {
+            viewer.scene.globe.show = val;
+            if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = val;
+        });
     };
 
     return {
         setupScene,
-        showBuildings
+        showBuildings,
+        showLandscape
     };
 }
