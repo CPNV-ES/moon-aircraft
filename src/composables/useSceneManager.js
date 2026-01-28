@@ -46,15 +46,14 @@ export function useSceneManager() {
             }
         };
 
+        updateMoon(config.location.lat, config.location.lng);
+
         if (coords) {
-            const unwatch = watch(coords, (val) => {
+            watch(coords, (val) => {
                 if (val) {
                     updateMoon(val.lat, val.lng);
-                    unwatch();
                 }
-            }, { immediate: true });
-        } else {
-            updateMoon(config.location.lat, config.location.lng);
+            });
         }
 
         try {

@@ -54,9 +54,9 @@ const onViewerReady = async (cesiumInstance) => {
     }
   }, { immediate: true });
 
-  watch(() => playerState.direction.value, (val) => direction.value = val);
-  watch(() => playerState.angle.value, (val) => angle.value = val);
-  watch(() => playerState.fov.value, (val) => fov.value = val);
+  watch(playerState.direction, (val) => direction.value = val, { immediate: true });
+  watch(playerState.angle, (val) => angle.value = val, { immediate: true });
+  watch(playerState.fov, (val) => fov.value = val, { immediate: true });
 };
 </script>
 
