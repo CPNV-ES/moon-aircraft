@@ -61,7 +61,7 @@
           </div>
           <div class="info-group">
             <label>VERTICAL RATE</label>
-            <div class="value" :class="getVerticalClass(selectedAircraft.vertical_rate)">
+            <div class="value">
               {{ formatVerticalRate(selectedAircraft.vertical_rate) }}
             </div>
           </div>
@@ -71,8 +71,7 @@
         <div class="info-group full-width">
           <label>POSITION</label>
           <div class="value position">
-            Lat: {{ formatCoordinate(selectedAircraft.latitude) }}
-            Lon: {{ formatCoordinate(selectedAircraft.longitude) }}
+            {{ formatPosition(selectedAircraft.latitude, selectedAircraft.longitude) }}
           </div>
         </div>
 
@@ -81,7 +80,7 @@
           <div class="info-group">
             <label>ON GROUND</label>
             <div class="value ground">
-              {{ selectedAircraft.on_ground ? 'YES' : 'NO' }}
+              {{ selectedAircraft.on_ground ? 'Yes' : 'No' }}
             </div>
           </div>
           <div class="info-group">
@@ -96,61 +95,142 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AircraftSidebar',
-  props: {
-    isOpen: {
-      type: Boolean,
-      default: false
-    },
-    selectedAircraft: {
-      type: Object,
-      default: null
+<script setup>
+// CORRECTION : Ajouter les imports manquants
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const isOpen = ref(false);
+const selectedAircraft = ref(null);
+const aircraftList = ref([]);
+let updateInterval = null;
+
+// Fonction pour récupérer les données avec FETCH
+const fetchAircraftData = async () => {
+  try {
+    console.log('Fetching aircraft data...');
+
+    const response = await fetch('https://opensky-network.org/api/states/all', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`HTTP error! status: ${response.status}`);
+      return; // Sort de la fonction proprement
     }
-  },
-  emits: ['close'],
-  methods: {
-    closeSidebar() {
-      this.$emit('close');
-    },
-    formatAltitude(altitude) {
-      if (altitude === null || altitude === undefined) return 'N/A';
-      return `${Math.round(altitude)} m`;
-    },
-    formatSpeed(speed) {
-      if (speed === null || speed === undefined) return 'N/A';
-      return `${Math.round(speed)} m/s`;
-    },
-    formatHeading(heading) {
-      if (heading === null || heading === undefined) return 'N/A';
-      return `${Math.round(heading)}°`;
-    },
-    formatVerticalRate(rate) {
-      if (rate === null || rate === undefined) return 'N/A';
-      const rounded = Math.round(rate);
-      return rounded > 0 ? `+${rounded} m/s` : `${rounded} m/s`;
-    },
-    getVerticalClass(rate) {
-      if (rate === null || rate === undefined) return '';
-      if (rate > 0) return 'climbing';
-      if (rate < 0) return 'descending';
-      return '';
-    },
-    formatCoordinate(coord) {
-      if (coord === null || coord === undefined) return 'N/A';
-      return coord.toFixed(4);
-    },
-    formatLastContact(timestamp) {
-      if (!timestamp) return 'N/A';
-      const now = Date.now() / 1000;
-      const diff = Math.round(now - timestamp);
-      if (diff < 60) return `${diff}s ago`;
-      if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
-      return `${Math.round(diff / 3600)}h ago`;
+
+    const data = await response.json();
+
+    if (data && data.states) {
+      aircraftList.value = data.states.map(state => ({
+        icao24: state[0],
+        callsign: state[1] ? state[1].trim() : null,
+        origin_country: state[2],
+        time_position: state[3],
+        last_contact: state[4],
+        longitude: state[5],
+        latitude: state[6],
+        baro_altitude: state[7],
+        on_ground: state[8],
+        velocity: state[9],
+        true_track: state[10],
+        vertical_rate: state[11],
+        sensors: state[12],
+        geo_altitude: state[13],
+        squawk: state[14],
+        spi: state[15],
+        position_source: state[16]
+      }));
+
+      console.log(`${aircraftList.value.length} aircraft loaded`);
     }
+  } catch (error) {
+    console.error('Error fetching aircraft data:', error.message);
   }
 };
+
+// Sélectionner un avion par ICAO24
+const selectAircraftByIcao = (icao24) => {
+  const aircraft = aircraftList.value.find(a => a.icao24 === icao24);
+  if (aircraft) {
+    selectedAircraft.value = aircraft;
+    isOpen.value = true;
+    console.log('Aircraft selected:', aircraft.callsign || aircraft.icao24);
+  } else {
+    console.warn('Aircraft not found:', icao24);
+  }
+};
+
+// Fermer la sidebar
+const closeSidebar = () => {
+  isOpen.value = false;
+  selectedAircraft.value = null;
+};
+
+// Fonctions de formatage
+const formatAltitude = (altitude) => {
+  if (altitude === null || altitude === undefined) return 'N/A';
+  return `${Math.round(altitude)} m\n${Math.round(altitude * 3.28084)} ft`;
+};
+
+const formatSpeed = (speed) => {
+  if (speed === null || speed === undefined) return 'N/A';
+  return `${Math.round(speed)} m/s\n${Math.round(speed * 1.94384)} knots`;
+};
+
+const formatHeading = (heading) => {
+  if (heading === null || heading === undefined) return 'N/A';
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const index = Math.round(heading / 45) % 8;
+  return `${Math.round(heading)}° (${directions[index]})`;
+};
+
+const formatVerticalRate = (rate) => {
+  if (rate === null || rate === undefined) return 'N/A';
+  const sign = rate > 0 ? 'UP' : rate < 0 ? 'DOWN' : 'LEVEL';
+  return `${sign} ${Math.abs(Math.round(rate))} m/s`;
+};
+
+const formatPosition = (lat, lon) => {
+  if (lat === null || lon === null) return 'N/A';
+  const latDir = lat >= 0 ? 'N' : 'S';
+  const lonDir = lon >= 0 ? 'E' : 'W';
+  return `${Math.abs(lat).toFixed(4)}° ${latDir}\n${Math.abs(lon).toFixed(4)}° ${lonDir}`;
+};
+
+const formatLastContact = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - timestamp;
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+};
+
+// Lifecycle hooks
+onMounted(() => {
+  console.log('Sidebar mounted - Starting data fetch');
+  fetchAircraftData();
+
+  updateInterval = setInterval(() => {
+    fetchAircraftData();
+  }, 10000);
+});
+
+onUnmounted(() => {
+  console.log('Sidebar unmounted - Clearing interval');
+  if (updateInterval) {
+    clearInterval(updateInterval);
+  }
+});
+
+// Exposer les méthodes au parent
+defineExpose({
+  selectAircraftByIcao,
+  closeSidebar
+});
 </script>
 
 <style scoped>
@@ -160,28 +240,30 @@ export default {
   right: 0;
   width: 400px;
   height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
+  border-bottom: 2px solid #334155;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid #3b82f6;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
 }
 
 .sidebar-header h2 {
   margin: 0;
-  font-size: 1.3rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
 }
 
 .close-btn {
@@ -211,7 +293,6 @@ export default {
   padding: 1.5rem;
 }
 
-/* État vide */
 .no-selection {
   text-align: center;
   padding: 4rem 2rem;
@@ -234,7 +315,6 @@ export default {
   color: #475569;
 }
 
-/* Informations avion */
 .aircraft-info {
   display: flex;
   flex-direction: column;
@@ -275,7 +355,6 @@ label {
   white-space: pre-line;
 }
 
-/* Styles spécifiques */
 .callsign {
   font-size: 1.3rem;
   font-weight: bold;
@@ -304,17 +383,16 @@ label {
   color: #cbd5e1;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .sidebar {
     width: 100%;
   }
+
   .info-row {
     grid-template-columns: 1fr;
   }
 }
 
-/* Scrollbar */
 .sidebar-content::-webkit-scrollbar {
   width: 8px;
 }
