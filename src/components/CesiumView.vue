@@ -40,9 +40,23 @@ const onViewerReady = async (cesiumInstance) => {
   setupScene(viewer, Cesium, config, coords);
   const playerState = initPlayer(viewer, Cesium, config.location);
 
-  direction.value = playerState.direction;
-  angle.value = playerState.angle;
-  fov.value = playerState.fov;
+  const unwatch = watch(coords, (val) => {
+    if (val) {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(val.lng, val.lat, config.location.height),
+        orientation: {
+          heading: Cesium.Math.toRadians(config.location.heading),
+          pitch: Cesium.Math.toRadians(config.location.pitch),
+          roll: 0.0
+        }
+      });
+      unwatch();
+    }
+  }, { immediate: true });
+
+  watch(() => playerState.direction.value, (val) => direction.value = val);
+  watch(() => playerState.angle.value, (val) => angle.value = val);
+  watch(() => playerState.fov.value, (val) => fov.value = val);
 };
 </script>
 
