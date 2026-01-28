@@ -19,3 +19,9 @@ export const OPENSKY_API = {
     EARTH_RADIUS_KM: 6371,
     DEFAULT_RADIUS_KM: 100
 }
+
+export const ASTRONOMY_API = {
+    APPLICATION_ID: import.meta.env['VITE_APPLICATION_ID'],
+    APPLICATION_SECRET: import.meta.env['VITE_APPLICATION_SECRET'],
+    ASTRONOMY_API_URL: 'https://api.astronomyapi.com/api/v2/studio/moon-phase',
+}
