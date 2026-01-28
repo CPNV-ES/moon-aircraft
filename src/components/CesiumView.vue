@@ -8,7 +8,7 @@ import AppHud from "@/components/AppHud.vue";
 import { useFlightData } from "@/composables/useFlightData.js";
 import { useAutoRefresh } from "@/composables/useAutoRefresh.js";
 
-const { setupScene, showBuildings } = useSceneManager();
+const { setupScene, showBuildings, showLandscape } = useSceneManager();
 const { initPlayer } = usePlayerSystem();
 
 const { aircraftCount, fetchFlights, error } = useFlightData();
@@ -36,7 +36,7 @@ const onViewerReady = async (cesiumInstance) => {
   } catch (e) {
     console.error("Failed to load base imagery layer:", e);
   }
-  
+
   setupScene(viewer, Cesium, config);
   const playerState = initPlayer(viewer, Cesium, config.location);
 
@@ -59,11 +59,13 @@ const onViewerReady = async (cesiumInstance) => {
     </vc-viewer>
 
     <AppHud
-      :direction="direction.value"
-      :angle="angle.value"
-      :fov="fov.value"
-      :show-buildings="showBuildings"
-      @toggle-buildings="showBuildings = !showBuildings"
+        :direction="direction"
+        :angle="angle"
+        :fov="fov"
+        :show-buildings="showBuildings"
+        @toggle-buildings="showBuildings = !showBuildings"
+        :show-landscape="showLandscape"
+        @toggle-landscape="showLandscape = !showLandscape"
     />
   </div>
 </template>
