@@ -1,4 +1,4 @@
-import { ref, watch } from "vue";
+import { ref, watch, onUnmounted } from "vue";
 
 export function useCameraPhysics(viewer, Cesium, coords) {
     const direction = ref("---");
@@ -12,27 +12,10 @@ export function useCameraPhysics(viewer, Cesium, coords) {
     controller.lookEventTypes = [Cesium.CameraEventType.LEFT_DRAG, Cesium.CameraEventType.PINCH];
     controller.rotateEventTypes = undefined;
     controller.zoomEventTypes = undefined;
-
-    viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-    viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    
     viewer.camera.constrainedAxis = Cesium.Cartesian3.UNIT_Z;
 
-    watch(coords, (newCoords) => {
-        if (!newCoords) return;
-
-        const camera = viewer.camera;
-        const carto = Cesium.Cartographic.fromDegrees(newCoords.lng, newCoords.lat);
-        let terrainHeight = viewer.scene.globe.getHeight(carto);
-
-        if (terrainHeight === undefined) terrainHeight = camera.positionCartographic.height;
-
-        viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(newCoords.lng, newCoords.lat, terrainHeight + 2.0),
-            orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 }
-        });
-    });
-
-    viewer.scene.postRender.addEventListener(() => {
+    const updatePhysics = () => {
         const camera = viewer.camera;
 
         let headingDeg = Cesium.Math.toDegrees(camera.heading);
@@ -42,7 +25,7 @@ export function useCameraPhysics(viewer, Cesium, coords) {
         const dirs = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
         direction.value = dirs[Math.round(headingDeg / 45) % 8];
 
-        if (Math.abs(camera.roll) > 0.0) {
+        if (Math.abs(camera.roll) > 0.0001) {
             camera.setView({ orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 } });
         }
 
@@ -51,18 +34,36 @@ export function useCameraPhysics(viewer, Cesium, coords) {
         if (pitchDeg > 85) camera.setView({ orientation: { heading: camera.heading, pitch: Cesium.Math.toRadians(85), roll: 0.0 } });
 
         const pos = camera.positionCartographic;
-        const tHeight = viewer.scene.globe.getHeight(pos);
-        if (tHeight !== undefined && Math.abs(pos.height - (tHeight + 2.0)) > 0.5) {
-            const newPos = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, tHeight + 2.0);
-            camera.setView({
-                destination: newPos,
-                orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 }
-            });
+        if (pos.height < 50000) {
+            const tHeight = viewer.scene.globe.getHeight(pos);
+            if (tHeight !== undefined && Math.abs(pos.height - (tHeight + 2.2)) > 0.5) {
+                const newPos = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, tHeight + 2.2);
+                camera.setView({
+                    destination: newPos,
+                    orientation: { heading: camera.heading, pitch: camera.pitch, roll: 0.0 }
+                });
+            }
         }
-    });
+    };
+
+    viewer.scene.postRender.addEventListener(updatePhysics);
+
+    const cleanup = () => {
+        viewer.scene.postRender.removeEventListener(updatePhysics);
+        controller.enableZoom = true;
+        controller.enableTranslate = false;
+        controller.enableTilt = false;
+        controller.enableLook = false;
+        controller.lookEventTypes = undefined;
+        controller.rotateEventTypes = undefined;
+        controller.zoomEventTypes = undefined;
+    };
+
+    onUnmounted(cleanup);
 
     return {
         direction,
-        angle
+        angle,
+        cleanup
     };
 }
