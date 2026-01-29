@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue';
 import { fetchFlights as apiFetchFlights } from '../services/OpenSkyService';
 import { useAircraftStore } from './useAircraftStore';
-import { config } from '../config/constants';
 
 export function useFlightData() {
   const { getAllAircraft, updateAircraft, aircraftCount } = useAircraftStore();
@@ -10,15 +9,19 @@ export function useFlightData() {
   const error = ref(null);
   const flights = computed(() => getAllAircraft());
 
-  async function fetchFlights() {
+  /**
+   * Fetch flights for a specific location
+   * @param {number} lat 
+   * @param {number} lng 
+   */
+  async function fetchFlights(lat, lng) {
+    if (!lat || !lng) return;
+
     loading.value = true;
     error.value = null;
 
     try {
-      const { lat, lng } = config.location;
-      // Call the service directly
       const aircraftList = await apiFetchFlights(lat, lng);
-      // Update the store
       updateAircraft(aircraftList);
     } catch (err) {
       error.value = err.message || 'Fetch failed';
