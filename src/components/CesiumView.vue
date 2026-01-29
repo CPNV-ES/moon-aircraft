@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { VcViewer } from "vue-cesium";
 import { config } from "@/config/constants.js";
 
@@ -14,6 +14,7 @@ import { useAircraftStore } from "@/composables/useAircraftStore.js";
 import AppHud from "@/components/AppHud.vue";
 import AppLoading from "@/components/AppLoading.vue";
 import LandingScreen from "@/components/LandingScreen.vue";
+import AircraftSidebar from "@/components/AircraftSidebar.vue";
 
 const viewerRef = ref(null);
 const cesiumRef = ref(null);
@@ -21,16 +22,26 @@ const cesiumRef = ref(null);
 const appState = ref('IDLE'); 
 const loadingText = ref("Initialisation...");
 
+const isSidebarOpen = ref(false);
+const selectedIcao24 = ref(null);
+
 const { setupScene, enableHighResParams, showBuildings, showLandscape, aimAtMoon } = useSceneManager();
 const { requestGps, loadFromStorage, hasStoredLocation, currentLocation } = useLocationManager();
-const { fetchFlights, error } = useFlightData();
-const { clearAircraft } = useAircraftStore();
+const { fetchFlights } = useFlightData();
+const { clearAircraft, getAircraft } = useAircraftStore();
 const { setViewer: setAircraftViewer } = useAircraftManager();
 const { initPlayer, stopPlayer, direction: playerDir, angle: playerAng, fov: playerFov } = usePlayerSystem();
 
 const direction = ref("---");
 const angle = ref(0);
 const fov = ref(60);
+
+const selectedAircraftData = computed(() => {
+  if (selectedIcao24.value) {
+    return getAircraft(selectedIcao24.value);
+  }
+  return null;
+});
 
 const onAimMoon = () => {
     if (viewerRef.value && cesiumRef.value) {
@@ -44,9 +55,21 @@ const { start: startAutoRefresh, stop: stopAutoRefresh } = useAutoRefresh(() => 
   }
 }, 10000);
 
-watch(error, (newError) => {
-    if(newError) console.error(`Erreur de récupération des données : ${newError}`);
-});
+const handleSceneClick = (click) => {
+  const viewer = viewerRef.value;
+  if (!viewer) return;
+
+  const pickedObject = viewer.scene.pick(click.position);
+  if (pickedObject && pickedObject.id && pickedObject.id.properties && pickedObject.id.properties.isAircraft) {
+    const icao = pickedObject.id.id;
+    console.log(`Avion sélectionné : ${icao}`);
+    selectedIcao24.value = icao;
+    isSidebarOpen.value = true;
+  } else {
+    isSidebarOpen.value = false;
+    selectedIcao24.value = null;
+  }
+};
 
 const onViewerReady = async (cesiumInstance) => {
   const { viewer, Cesium } = cesiumInstance;
@@ -66,6 +89,8 @@ const onViewerReady = async (cesiumInstance) => {
   }
 
   setupScene(viewer, Cesium, config);
+
+  viewer.screenSpaceEventHandler.setInputAction(handleSceneClick, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 };
 
 const startExperience = async (method) => {
@@ -77,30 +102,12 @@ const startExperience = async (method) => {
   loadingText.value = "Acquisition de la position GPS...";
 
   try {
-    let loc;
-    if (method === 'gps') {
-      loc = await requestGps();
-    } else {
-      loc = loadFromStorage();
-    }
-
-    if (!loc) throw new Error("Impossible de déterminer la position.");
-
-    loadingText.value = "Chargement du terrain et des bâtiments...";
+    let loc = (method === 'gps') ? await requestGps() : loadFromStorage();
     await enableHighResParams(viewer, Cesium);
-
-    loadingText.value = `Vol vers ${loc.lat.toFixed(2)}, ${loc.lng.toFixed(2)}...`;
     
-    viewer.scene.screenSpaceCameraController.enableInputs = false;
-
     await viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(loc.lng, loc.lat, loc.height),
-      orientation: {
-        heading: Cesium.Math.toRadians(0),
-        pitch: Cesium.Math.toRadians(-20),
-        roll: 0.0
-      },
-      duration: 3.5,
+      duration: 3,
       complete: async () => {
         loadingText.value = "Initialisation des systèmes...";
         
@@ -135,9 +142,9 @@ const goHome = () => {
   stopAutoRefresh();
   stopPlayer();
   clearAircraft();
-  
+  isSidebarOpen.value = false;
   appState.value = 'IDLE';
-  viewer.camera.flyHome(2.0);
+  viewerRef.value.camera.flyHome(2.0);
 };
 
 </script>
@@ -145,45 +152,31 @@ const goHome = () => {
 <template>
   <div class="viewer-container">
     <vc-viewer
-      :animation="false"
-      :base-layer-picker="false"
-      :timeline="false"
-      :selection-indicator="false"
-      :info-box="false"
+      :animation="false" :base-layer-picker="false" :timeline="false"
+      :selection-indicator="false" :info-box="false"
       @ready="onViewerReady"
     >
     </vc-viewer>
 
+    <!-- UI Overlays -->
     <transition name="fade">
-      <LandingScreen 
-        v-if="appState === 'IDLE'"
-        :has-history="hasStoredLocation"
-        @start-gps="startExperience('gps')"
-        @start-history="startExperience('history')"
-      />
+      <LandingScreen v-if="appState === 'IDLE'" :has-history="hasStoredLocation" @start-gps="startExperience('gps')" @start-history="startExperience('history')" />
     </transition>
 
     <transition name="fade">
-      <AppLoading 
-        v-if="appState === 'LOADING'" 
-        :text="loadingText" 
-      />
+      <AppLoading v-if="appState === 'LOADING'" :text="loadingText" />
     </transition>
 
     <transition name="fade">
-      <AppHud
-        v-if="appState === 'ACTIVE'"
-          :direction="direction"
-          :angle="angle"
-          :fov="fov"
-          :show-buildings="showBuildings"
-          @toggle-buildings="showBuildings = !showBuildings"
-          :show-landscape="showLandscape"
-          @toggle-landscape="showLandscape = !showLandscape"
-          @aim-moon="onAimMoon"
-          @go-home="goHome"
-      />
+      <AppHud v-if="appState === 'ACTIVE'" :direction="direction" :angle="angle" :fov="fov" :show-buildings="showBuildings" @toggle-buildings="showBuildings = !showBuildings" :show-landscape="showLandscape" @toggle-landscape="showLandscape = !showLandscape" @aim-moon="onAimMoon" @go-home="goHome" />
     </transition>
+    
+    <!-- Sidebar -->
+    <AircraftSidebar 
+      :is-open="isSidebarOpen"
+      :selected-aircraft="selectedAircraftData"
+      @close="isSidebarOpen = false"
+    />
   </div>
 </template>
 
@@ -196,13 +189,10 @@ const goHome = () => {
   background: black;
 }
 
-.fade-enter-active,
-.fade-leave-active {
+.fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s ease;
 }
-
-.fade-enter-from,
-.fade-leave-to {
+.fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
 </style>
