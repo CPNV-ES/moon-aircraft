@@ -9,12 +9,12 @@ import { useFlightData } from "@/composables/useFlightData.js";
 import { useAutoRefresh } from "@/composables/useAutoRefresh.js";
 
 const { setupScene, showBuildings, showLandscape } = useSceneManager();
-const { initPlayer, coords } = usePlayerSystem();
+const { initPlayer, coords, error: geoError } = usePlayerSystem();
 
-const { aircraftCount, fetchFlights, error } = useFlightData();
+const { aircraftCount, fetchFlights, error: flightError } = useFlightData();
 const { start: startAutoRefresh } = useAutoRefresh(fetchFlights, 30000);
 
-watch(error, (newError) => {
+watch(flightError, (newError) => {
     if(newError) {
         console.error(`%cFAILURE: A fetch error was detected: ${newError}`, 'color: red; font-weight: bold;');
     }
@@ -37,22 +37,39 @@ const onViewerReady = async (cesiumInstance) => {
     console.error("Failed to load base imagery layer:", e);
   }
 
-  setupScene(viewer, Cesium, config, coords);
-  const playerState = initPlayer(viewer, Cesium, config.location);
+  let startLocation = config.location;
+  let isRestored = false;
 
-  const unwatch = watch(coords, (val) => {
-    if (val) {
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(val.lng, val.lat, config.location.height),
-        orientation: {
-          heading: Cesium.Math.toRadians(config.location.heading),
-          pitch: Cesium.Math.toRadians(config.location.pitch),
-          roll: 0.0
-        }
-      });
-      unwatch();
-    }
-  }, { immediate: true });
+  if (coords.value) {
+    startLocation = {
+      lat: coords.value.lat,
+      lng: coords.value.lng,
+      height: config.location.height,
+      heading: config.location.heading,
+      pitch: config.location.pitch
+    };
+    isRestored = true;
+  }
+
+  setupScene(viewer, Cesium, config, coords);
+
+  const playerState = initPlayer(viewer, Cesium, startLocation);
+
+  if (!isRestored) {
+    const unwatch = watch(coords, (val) => {
+      if (val) {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(val.lng, val.lat, config.location.height),
+          orientation: {
+            heading: Cesium.Math.toRadians(config.location.heading),
+            pitch: Cesium.Math.toRadians(config.location.pitch),
+            roll: 0.0
+          }
+        });
+        unwatch();
+      }
+    });
+  }
 
   watch(playerState.direction, (val) => direction.value = val, { immediate: true });
   watch(playerState.angle, (val) => angle.value = val, { immediate: true });
