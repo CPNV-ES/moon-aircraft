@@ -1,15 +1,19 @@
-import { ref } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import * as Cesium from 'cesium';
+import { useAircraftStore } from './useAircraftStore';
 
-export function useAircraftManager(viewer) {
+export function useAircraftManager() {
   const aircraftEntities = ref(new Map());
+  const viewerRef = ref(null);
+  const { getAllAircraft } = useAircraftStore();
 
-  /**
-   * Updates, creates, or removes aircraft entities based on fresh flight data.
-   * @param {Array<Aircraft>} flights - The array of aircraft data from useFlightData.
-   */
+  const setViewer = (viewerInstance) => {
+    viewerRef.value = viewerInstance;
+  };
+
   function updateAircraftEntities(flights) {
-    if (!viewer) return;
+    const viewer = viewerRef.value;
+    if (!viewer || viewer.isDestroyed()) return;
 
     const newIcao24s = new Set(flights.map(f => f.icao24));
 
@@ -27,31 +31,59 @@ export function useAircraftManager(viewer) {
         aircraft.position.altitude
       );
 
-      const heading = Cesium.Math.toRadians(aircraft.heading || 0);
-      const pitch = 0;
-      const roll = 0;
+      const course = Cesium.Math.toRadians(aircraft.heading || 0);
+      const headingOffset = Cesium.Math.toRadians(-90); 
+      
       const orientation = Cesium.Transforms.headingPitchRollQuaternion(
         position,
-        new Cesium.HeadingPitchRoll(heading, pitch, roll)
+        new Cesium.HeadingPitchRoll(course + headingOffset, 0, 0)
       );
 
       let entity = aircraftEntities.value.get(aircraft.icao24);
 
       if (entity) {
-        // Entity exists, update its position and orientation
         entity.position = position;
         entity.orientation = orientation;
+        if(entity.label) {
+            entity.label.text = `${aircraft.callsign}\n${Math.round(aircraft.position.altitude)}m`;
+        }
       } else {
-        // Entity doesn't exist, create it
         entity = viewer.entities.add({
           id: aircraft.icao24,
           position: position,
           orientation: orientation,
+
           model: {
-            uri: '/3dmodels/DC8_AFRC_AIR_0824.glb',
-            minimumPixelSize: 64,
-            maximumScale: 1000,
+            uri: '/3dmodels/Airplane.glb',
+            minimumPixelSize: 30, 
+            scale: 0.8,           
+            maximumScale: 200,    
+            runAnimations: true
           },
+
+          label: {
+            text: `${aircraft.callsign}\n${Math.round(aircraft.position.altitude)}m`,
+            font: 'bold 32px sans-serif', 
+            scale: 0.4,                   
+            
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3, 
+            
+            showBackground: true,
+            backgroundColor: Cesium.Color.fromCssColorString('rgba(15, 15, 25, 0.9)'),
+            backgroundPadding: new Cesium.Cartesian2(12, 6),
+            
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, -30),
+            
+            eyeOffset: new Cesium.Cartesian3(0, 0, -50), 
+            
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 50000.0),
+            disableDepthTestDistance: undefined 
+          },
+          
           properties: {
             isAircraft: true,
             ...aircraft
@@ -62,7 +94,18 @@ export function useAircraftManager(viewer) {
     });
   }
 
-  return {
-    updateAircraftEntities
-  };
+  const stopWatch = watch(() => getAllAircraft(), (newFlights) => {
+      if(newFlights && viewerRef.value) updateAircraftEntities(newFlights);
+  }, { deep: true });
+
+  onUnmounted(() => {
+    stopWatch();
+    const viewer = viewerRef.value;
+    if(viewer && !viewer.isDestroyed()) {
+        aircraftEntities.value.forEach(e => viewer.entities.remove(e));
+        aircraftEntities.value.clear();
+    }
+  });
+
+  return { aircraftEntities, setViewer };
 }
