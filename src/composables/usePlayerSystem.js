@@ -3,7 +3,7 @@ import { useFieldOfView } from "./player/useFieldOfView.js";
 import { useCameraPhysics } from "./player/useCameraPhysics.js";
 
 export function usePlayerSystem() {
-    const { coords } = useGeolocation();
+    const { coords, error } = useGeolocation();
 
     const initPlayer = (viewer, Cesium, startLocation) => {
         viewer.camera.setView({
@@ -27,6 +27,7 @@ export function usePlayerSystem() {
 
     return {
         initPlayer,
-        coords
+        coords,
+        error
     };
 }

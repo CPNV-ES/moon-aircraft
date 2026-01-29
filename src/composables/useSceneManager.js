@@ -46,14 +46,18 @@ export function useSceneManager() {
             }
         };
 
-        updateMoon(config.location.lat, config.location.lng);
+        if (coords && coords.value) {
+            updateMoon(coords.value.lat, coords.value.lng);
+        } else {
+            updateMoon(config.location.lat, config.location.lng);
+        }
 
         if (coords) {
             watch(coords, (val) => {
                 if (val) {
                     updateMoon(val.lat, val.lng);
                 }
-            });
+            }, { immediate: true });
         }
 
         try {
@@ -91,10 +95,8 @@ export function useSceneManager() {
             label: {
                 text: "Lune",
                 font: "14pt monospace",
-                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                style: Cesium.LabelStyle.FILL,
                 fillColor: Cesium.Color.YELLOW,
-                outlineColor: Cesium.Color.BLACK,
-                outlineWidth: 2,
                 verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
                 pixelOffset: new Cesium.CallbackProperty((time) => {
                     const camera = viewer.scene.camera;
